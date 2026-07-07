@@ -23,9 +23,10 @@ config/                         # non-secret defaults
 src/dual_sleeve_trader/
   core/                         # enums and dataclasses
   exchange/                     # exchange filters and adapter interfaces
-  execution/                    # router, state machine, safe mode
+  execution/                    # router, state machine, safe mode, reconciliation
   portfolio/                    # virtual sleeve ledger
   risk/                         # circuit breakers, freshness, overrides
+  storage/                      # local SQLite state
   strategies/                   # sleeve B signal and sleeve A scanner skeletons
   ops/                          # alert interfaces
 tests/                          # unit tests for production guardrails
@@ -54,3 +55,7 @@ cp .env.example .env
 2. Run Sleeve B signal-only and historical replay.
 3. Run Binance Futures Testnet / exchange simulation for one month.
 4. Keep Sleeve A scanner-only until candidate quality, borrow proxy, depth, and cluster filters are validated.
+
+## Reconciliation intent
+
+Local order state is persisted in SQLite. The reconciliation engine compares local open orders with exchange/testnet open orders and enters `SAFE_MODE` on missing exchange orders, unknown exchange orders, meaningful terminal-status mismatches, or exchange fetch failures.
