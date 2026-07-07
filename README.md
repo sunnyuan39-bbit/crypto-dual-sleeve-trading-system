@@ -25,20 +25,14 @@ Project layout:
 
 Local setup:
 
-```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
 pytest
-```
 
 Environment:
 
-Copy `.env.example` to `.env` locally. Never commit `.env`.
-
-```bash
-cp .env.example .env
-```
+Copy .env.example to .env locally. Never commit .env.
 
 Stage-gate intent:
 
