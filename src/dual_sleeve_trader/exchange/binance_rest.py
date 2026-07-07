@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 
 import httpx
 
+from dual_sleeve_trader.core.account import AccountAssetSnapshot, AccountSnapshotV3, ExchangePositionSnapshot
 from dual_sleeve_trader.core.enums import OrderStatus
 from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderRecord, SymbolFilters
@@ -98,6 +99,19 @@ class BinanceFuturesTestnetRestAdapter(ExchangeAdapter):
             raise BinanceApiError("expected object payload from query order")
         return parse_order_snapshot(payload)
 
+    def fetch_account_snapshot(self) -> AccountSnapshotV3:
+        payload = self._request("GET", "/fapi/v3/account", params={}, signed=True)
+        if not isinstance(payload, dict):
+            raise BinanceApiError("expected object payload from account snapshot")
+        return parse_account_snapshot(payload)
+
+    def fetch_position_snapshots(self, symbol: str | None = None) -> list[ExchangePositionSnapshot]:
+        params = {"symbol": symbol} if symbol else {}
+        payload = self._request("GET", "/fapi/v3/positionRisk", params=params, signed=True)
+        if not isinstance(payload, list):
+            raise BinanceApiError("expected list payload from positionRisk")
+        return [parse_position_snapshot(item) for item in payload if isinstance(item, dict)]
+
     def _load_exchange_info(self) -> None:
         payload = self._request("GET", "/fapi/v1/exchangeInfo", params={}, signed=False)
         symbols = payload.get("symbols", []) if isinstance(payload, dict) else []
@@ -160,6 +174,42 @@ _BINANCE_STATUS_MAP = {
 def sign_params(params: dict[str, Any], api_secret: str) -> str:
     query = urlencode({key: value for key, value in params.items() if key != "signature"})
     return hmac.new(api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+
+
+def parse_account_snapshot(payload: dict[str, Any]) -> AccountSnapshotV3:
+    assets = tuple(
+        AccountAssetSnapshot(
+            asset=str(item.get("asset")),
+            wallet_balance=Decimal(str(item.get("walletBalance", "0"))),
+            unrealized_profit=Decimal(str(item.get("unrealizedProfit", "0"))),
+            margin_balance=Decimal(str(item.get("marginBalance", "0"))),
+            available_balance=Decimal(str(item["availableBalance"])) if item.get("availableBalance") is not None else None,
+            update_time_ms=int(item["updateTime"]) if item.get("updateTime") is not None else None,
+        )
+        for item in payload.get("assets", [])
+        if isinstance(item, dict)
+    )
+    return AccountSnapshotV3(
+        total_wallet_balance=Decimal(str(payload.get("totalWalletBalance", "0"))),
+        total_unrealized_profit=Decimal(str(payload.get("totalUnrealizedProfit", "0"))),
+        total_margin_balance=Decimal(str(payload.get("totalMarginBalance", "0"))),
+        available_balance=Decimal(str(payload.get("availableBalance", "0"))),
+        assets=assets,
+    )
+
+
+def parse_position_snapshot(payload: dict[str, Any]) -> ExchangePositionSnapshot:
+    return ExchangePositionSnapshot(
+        symbol=str(payload.get("symbol")),
+        position_side=str(payload.get("positionSide", "BOTH")),
+        position_amt=Decimal(str(payload.get("positionAmt", "0"))),
+        entry_price=Decimal(str(payload["entryPrice"])) if payload.get("entryPrice") is not None else None,
+        mark_price=Decimal(str(payload["markPrice"])) if payload.get("markPrice") is not None else None,
+        unrealized_profit=Decimal(str(payload.get("unRealizedProfit", payload.get("unrealizedProfit", "0")))),
+        notional=Decimal(str(payload.get("notional", "0"))),
+        isolated_margin=Decimal(str(payload.get("isolatedMargin", "0"))),
+        update_time_ms=int(payload["updateTime"]) if payload.get("updateTime") is not None else None,
+    )
 
 
 def parse_order_snapshot(payload: dict[str, Any]) -> ExchangeOrderSnapshot:
