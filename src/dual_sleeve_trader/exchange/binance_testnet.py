@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderRecord, SymbolFilters
 from dual_sleeve_trader.exchange.interfaces import ExchangeAdapter
 
@@ -34,3 +35,17 @@ class BinanceUsdmTestnetAdapter(ExchangeAdapter):
 
     def fetch_open_orders(self) -> list[OrderRecord]:
         return list(self._orders.values())
+
+    def query_order(self, symbol: str, client_order_id: str) -> ExchangeOrderSnapshot | None:
+        _ = symbol
+        order = self._orders.get(client_order_id)
+        if order is None:
+            return None
+        return ExchangeOrderSnapshot(
+            client_order_id=order.client_order_id,
+            symbol=order.intent.symbol,
+            status=order.status,
+            exchange_order_id=order.exchange_order_id,
+            executed_quantity=order.filled_quantity,
+            average_price=order.average_fill_price,
+        )
