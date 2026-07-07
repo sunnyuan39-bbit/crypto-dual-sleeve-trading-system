@@ -1,0 +1,22 @@
+major_symbols:
+  - BTCUSDT
+  - ETHUSDT
+  - SOLUSDT
+  - BNBUSDT
+  - HYPEUSDT
+
+sleeve_b_clusters:
+  BTC_BETA:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    - BNBUSDT
+  HYPE_IDIO:
+    - HYPEUSDT
+
+sleeve_a_narrative_clusters:
+  AI_AGENT:
+    - LABUSDT
+    - AIGENSYNUSDT
+    - SYNUSDT
+  UNCLASSIFIED: []

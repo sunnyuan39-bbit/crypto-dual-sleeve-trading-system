@@ -1,0 +1,19 @@
+account:
+  starting_equity_usdt: 120000
+  global_daily_loss_stop_usdt: -3000
+
+sleeves:
+  A:
+    starting_equity_usdt: 40000
+    risk_per_trade_usdt: 400
+    daily_loss_stop_usdt: -1000
+    monthly_loss_stop_usdt: -8000
+    max_open_positions: 3
+    max_new_entries_per_day: 4
+  B:
+    starting_equity_usdt: 80000
+    risk_per_trade_usdt: 800
+    weekly_loss_stop_usdt: -3200
+    max_cluster_risk_r: 3
+    max_total_risk_r: 4
+    max_effective_leverage: 5

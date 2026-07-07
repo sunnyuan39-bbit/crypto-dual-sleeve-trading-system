@@ -1,0 +1,6 @@
+default_mode: SIGNAL_ONLY
+allowed_modes:
+  - SIGNAL_ONLY
+  - PAPER_LOCAL
+  - EXCHANGE_TESTNET
+live_trading_enabled: false
