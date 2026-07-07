@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 import httpx
 
 from dual_sleeve_trader.core.enums import OrderStatus
+from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderRecord, SymbolFilters
 from dual_sleeve_trader.exchange.interfaces import ExchangeAdapter
 
@@ -77,13 +78,25 @@ class BinanceFuturesTestnetRestAdapter(ExchangeAdapter):
             params={"symbol": symbol, "origClientOrderId": client_order_id},
             signed=True,
         )
-        return self._order_record_from_payload(payload)
+        _ = payload
+        return None
 
     def fetch_open_orders(self) -> list[OrderRecord]:
         payload = self._request("GET", "/fapi/v1/openOrders", params={}, signed=True)
         if not isinstance(payload, list):
             raise BinanceApiError("expected list payload from openOrders")
-        return [record for item in payload if (record := self._order_record_from_payload(item))]
+        return []
+
+    def query_order(self, symbol: str, client_order_id: str) -> ExchangeOrderSnapshot | None:
+        payload = self._request(
+            "GET",
+            "/fapi/v1/order",
+            params={"symbol": symbol, "origClientOrderId": client_order_id},
+            signed=True,
+        )
+        if not isinstance(payload, dict):
+            raise BinanceApiError("expected object payload from query order")
+        return parse_order_snapshot(payload)
 
     def _load_exchange_info(self) -> None:
         payload = self._request("GET", "/fapi/v1/exchangeInfo", params={}, signed=False)
@@ -133,12 +146,6 @@ class BinanceFuturesTestnetRestAdapter(ExchangeAdapter):
             order.average_fill_price = Decimal(str(avg_price))
         return order
 
-    def _order_record_from_payload(self, payload: dict[str, Any]) -> OrderRecord | None:
-        # Open-order reconciliation will map exchange payloads back to local order records in PR-003.
-        # This adapter deliberately avoids inventing sleeve ownership from exchange-only fields.
-        _ = payload
-        return None
-
 
 _BINANCE_STATUS_MAP = {
     "NEW": OrderStatus.SUBMITTED,
@@ -153,6 +160,20 @@ _BINANCE_STATUS_MAP = {
 def sign_params(params: dict[str, Any], api_secret: str) -> str:
     query = urlencode({key: value for key, value in params.items() if key != "signature"})
     return hmac.new(api_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+
+
+def parse_order_snapshot(payload: dict[str, Any]) -> ExchangeOrderSnapshot:
+    status = _BINANCE_STATUS_MAP.get(str(payload.get("status")), OrderStatus.UNKNOWN)
+    avg_price_raw = payload.get("avgPrice")
+    average_price = None if avg_price_raw in (None, "0", "0.0", "0.00000") else Decimal(str(avg_price_raw))
+    return ExchangeOrderSnapshot(
+        client_order_id=str(payload.get("clientOrderId")),
+        symbol=str(payload.get("symbol")),
+        status=status,
+        exchange_order_id=str(payload.get("orderId")) if payload.get("orderId") is not None else None,
+        executed_quantity=Decimal(str(payload.get("executedQty", "0"))),
+        average_price=average_price,
+    )
 
 
 def parse_symbol_filters(symbol_info: dict[str, Any]) -> SymbolFilters | None:
