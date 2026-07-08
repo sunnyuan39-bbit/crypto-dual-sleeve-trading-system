@@ -36,6 +36,7 @@ class ReadWriteSmokeExchange(Protocol):
     def get_symbol_filters(self, symbol: str) -> SymbolFilters: ...
     def fetch_account_snapshot(self) -> AccountSnapshotV3: ...
     def fetch_position_snapshots(self, symbol: str | None = None) -> list[ExchangePositionSnapshot]: ...
+    def fetch_mark_price(self, symbol: str) -> Decimal: ...
     def submit_order(self, order: OrderRecord) -> OrderRecord: ...
     def query_order(self, symbol: str, client_order_id: str) -> ExchangeOrderSnapshot | None: ...
     def cancel_order(self, client_order_id: str, symbol: str) -> OrderRecord | None: ...
@@ -106,7 +107,8 @@ def run_testnet_read_write_smoke_with_exchange(
     exchange.get_symbol_filters(order_config.symbol)
     account = exchange.fetch_account_snapshot()
     positions = exchange.fetch_position_snapshots(order_config.symbol)
-    _validate_non_marketable(order_config, positions)
+    mark_price = _resolve_mark_price(exchange, order_config.symbol, positions)
+    _validate_non_marketable(order_config, mark_price)
 
     safe_mode = SafeModeController()
     router = OrderRouter(TradingMode.EXCHANGE_TESTNET, exchange, safe_mode)
@@ -182,15 +184,11 @@ def _validate_runtime(runtime: RuntimeConfig) -> None:
         raise TestnetSmokeSafetyError("testnet credentials are required")
 
 
-def _validate_non_marketable(
-    order_config: TestnetSmokeOrderConfig,
-    positions: list[ExchangePositionSnapshot],
-) -> None:
+def _validate_non_marketable(order_config: TestnetSmokeOrderConfig, mark_price: Decimal) -> None:
     if not order_config.require_non_marketable:
         return
-    mark_price = _find_mark_price(order_config.symbol, positions)
-    if mark_price is None or mark_price <= 0:
-        raise TestnetSmokeSafetyError("mark price is required for non-marketable guard")
+    if mark_price <= 0:
+        raise TestnetSmokeSafetyError("positive mark price is required for non-marketable guard")
     margin = order_config.non_marketable_margin
     if not Decimal("0") < margin < Decimal("1"):
         raise TestnetSmokeSafetyError("non_marketable_margin must be between 0 and 1")
@@ -208,7 +206,18 @@ def _validate_non_marketable(
             )
 
 
-def _find_mark_price(symbol: str, positions: list[ExchangePositionSnapshot]) -> Decimal | None:
+def _resolve_mark_price(
+    exchange: ReadWriteSmokeExchange,
+    symbol: str,
+    positions: list[ExchangePositionSnapshot],
+) -> Decimal:
+    position_mark_price = _find_position_mark_price(symbol, positions)
+    if position_mark_price is not None and position_mark_price > 0:
+        return position_mark_price
+    return exchange.fetch_mark_price(symbol)
+
+
+def _find_position_mark_price(symbol: str, positions: list[ExchangePositionSnapshot]) -> Decimal | None:
     for position in positions:
         if position.symbol == symbol and position.mark_price is not None:
             return position.mark_price
