@@ -32,7 +32,7 @@ def test_sleeve_b_replay_long_breakout_hits_tp3() -> None:
     daily = _bull_daily_bars()
     four_hour = [_bar(f"2024-B{index:03d}", "100", "101", "99") for index in range(121)]
     four_hour.append(_bar("2024-B121", "105", "106", "104"))
-    four_hour.append(_bar("2024-B122", "124", "126", "104"))
+    four_hour.append(_bar("2024-B122", "130", "131", "104"))
 
     result = run_sleeve_b_replay(
         "BTCUSDT",
@@ -53,7 +53,8 @@ def test_sleeve_b_replay_short_breakdown_hits_tp1_then_breakeven() -> None:
     daily = _bear_daily_bars()
     four_hour = [_bar(f"2024-B{index:03d}", "200", "201", "199") for index in range(121)]
     four_hour.append(_bar("2024-B121", "195", "196", "194"))
-    four_hour.append(_bar("2024-B122", "191", "195", "187"))
+    four_hour.append(_bar("2024-B122", "190", "194", "185"))
+    four_hour.append(_bar("2024-B123", "193", "195", "190"))
 
     result = run_sleeve_b_replay(
         "ETHUSDT",
@@ -65,7 +66,7 @@ def test_sleeve_b_replay_short_breakdown_hits_tp1_then_breakeven() -> None:
     trade = result.trades[0]
     assert trade.side == PositionSide.SHORT
     assert trade.tp_hits[0] == "TP1"
-    assert trade.exit_reason in {"BREAKEVEN_STOP", "TP2", "TP3"}
+    assert trade.exit_reason == "BREAKEVEN_STOP"
 
 
 def test_sleeve_b_replay_time_stop_when_targets_not_hit() -> None:
