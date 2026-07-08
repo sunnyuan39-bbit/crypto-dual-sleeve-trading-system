@@ -6,6 +6,7 @@ from dual_sleeve_trader.core.account import ExchangePositionSnapshot
 from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderRecord, SymbolFilters
 from dual_sleeve_trader.exchange.interfaces import ExchangeAdapter
+from dual_sleeve_trader.strategies.sleeve_b_replay import OhlcBar
 
 
 class BinanceUsdmTestnetAdapter(ExchangeAdapter):
@@ -15,10 +16,12 @@ class BinanceUsdmTestnetAdapter(ExchangeAdapter):
         self,
         filters: dict[str, SymbolFilters] | None = None,
         positions: list[ExchangePositionSnapshot] | None = None,
+        klines: dict[tuple[str, str], list[OhlcBar]] | None = None,
     ) -> None:
         self._filters = filters or {}
         self._orders: dict[str, OrderRecord] = {}
         self._positions = positions or []
+        self._klines = klines or {}
 
     def get_symbol_filters(self, symbol: str) -> SymbolFilters:
         return self._filters.get(
@@ -46,6 +49,9 @@ class BinanceUsdmTestnetAdapter(ExchangeAdapter):
         if symbol is None:
             return list(self._positions)
         return [position for position in self._positions if position.symbol == symbol]
+
+    def fetch_klines(self, symbol: str, interval: str, limit: int = 500) -> list[OhlcBar]:
+        return list(self._klines.get((symbol, interval), []))[-limit:]
 
     def query_order(self, symbol: str, client_order_id: str) -> ExchangeOrderSnapshot | None:
         _ = symbol
