@@ -90,10 +90,18 @@ def test_allocator_rejects_when_max_positions_reached() -> None:
 
 def test_allocator_rejects_below_min_notional() -> None:
     allocator = SleeveBExecutionAllocator(
-        SleeveBExecutionAllocatorConfig(default_risk_fraction_per_trade=Decimal("0.0001"))
+        SleeveBExecutionAllocatorConfig(default_risk_fraction_per_trade=Decimal("0.002"))
     )
+    candidate = SleeveBSignalCandidate(
+        symbol="SOLUSDT",
+        side=PositionSide.LONG,
+        entry_price=Decimal("100"),
+        stop_price=Decimal("95"),
+        setup_id="sol-small-risk",
+    )
+    filters = SymbolFilters("SOLUSDT", Decimal("0.01"), Decimal("0.001"), Decimal("50"))
 
-    decision = allocator.allocate(_candidate(), _account("5000"), [], _filters())
+    decision = allocator.allocate(candidate, _account("5000"), [], filters)
 
     assert not decision.accepted
     assert decision.reason == "BELOW_MIN_NOTIONAL"
