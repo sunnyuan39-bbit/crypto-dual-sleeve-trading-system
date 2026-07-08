@@ -15,6 +15,7 @@ from dual_sleeve_trader.core.enums import OrderStatus
 from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderRecord, SymbolFilters
 from dual_sleeve_trader.exchange.interfaces import ExchangeAdapter
+from dual_sleeve_trader.strategies.sleeve_b_replay import OhlcBar
 
 
 BINANCE_USDM_TESTNET_BASE_URL = "https://demo-fapi.binance.com"
@@ -117,6 +118,17 @@ class BinanceFuturesTestnetRestAdapter(ExchangeAdapter):
         if not isinstance(payload, dict):
             raise BinanceApiError("expected object payload from premiumIndex")
         return parse_mark_price(payload)
+
+    def fetch_klines(self, symbol: str, interval: str, limit: int = 500) -> list[OhlcBar]:
+        payload = self._request(
+            "GET",
+            "/fapi/v1/klines",
+            params={"symbol": symbol, "interval": interval, "limit": limit},
+            signed=False,
+        )
+        if not isinstance(payload, list):
+            raise BinanceApiError("expected list payload from klines")
+        return [parse_kline(item) for item in payload]
 
     def _load_exchange_info(self) -> None:
         payload = self._request("GET", "/fapi/v1/exchangeInfo", params={}, signed=False)
@@ -223,6 +235,18 @@ def parse_mark_price(payload: dict[str, Any]) -> Decimal:
     if mark_price is None:
         raise BinanceApiError("premiumIndex payload missing markPrice")
     return Decimal(str(mark_price))
+
+
+def parse_kline(payload: list[Any]) -> OhlcBar:
+    if len(payload) < 5:
+        raise BinanceApiError("kline payload must have at least 5 elements")
+    return OhlcBar(
+        timestamp=str(payload[0]),
+        open=Decimal(str(payload[1])),
+        high=Decimal(str(payload[2])),
+        low=Decimal(str(payload[3])),
+        close=Decimal(str(payload[4])),
+    )
 
 
 def parse_order_snapshot(payload: dict[str, Any]) -> ExchangeOrderSnapshot:
