@@ -112,6 +112,12 @@ class BinanceFuturesTestnetRestAdapter(ExchangeAdapter):
             raise BinanceApiError("expected list payload from positionRisk")
         return [parse_position_snapshot(item) for item in payload if isinstance(item, dict)]
 
+    def fetch_mark_price(self, symbol: str) -> Decimal:
+        payload = self._request("GET", "/fapi/v1/premiumIndex", params={"symbol": symbol}, signed=False)
+        if not isinstance(payload, dict):
+            raise BinanceApiError("expected object payload from premiumIndex")
+        return parse_mark_price(payload)
+
     def _load_exchange_info(self) -> None:
         payload = self._request("GET", "/fapi/v1/exchangeInfo", params={}, signed=False)
         symbols = payload.get("symbols", []) if isinstance(payload, dict) else []
@@ -212,6 +218,13 @@ def parse_position_snapshot(payload: dict[str, Any]) -> ExchangePositionSnapshot
     )
 
 
+def parse_mark_price(payload: dict[str, Any]) -> Decimal:
+    mark_price = payload.get("markPrice")
+    if mark_price is None:
+        raise BinanceApiError("premiumIndex payload missing markPrice")
+    return Decimal(str(mark_price))
+
+
 def parse_order_snapshot(payload: dict[str, Any]) -> ExchangeOrderSnapshot:
     status = _BINANCE_STATUS_MAP.get(str(payload.get("status")), OrderStatus.UNKNOWN)
     avg_price_raw = payload.get("avgPrice")
@@ -221,7 +234,7 @@ def parse_order_snapshot(payload: dict[str, Any]) -> ExchangeOrderSnapshot:
         symbol=str(payload.get("symbol")),
         status=status,
         exchange_order_id=str(payload.get("orderId")) if payload.get("orderId") is not None else None,
-        executed_quantity=Decimal(str(payload.get("executedQty", "0"))),
+        executed_quantity=Decimal(str(payload.get("executedQty", "0")),),
         average_price=average_price,
     )
 
