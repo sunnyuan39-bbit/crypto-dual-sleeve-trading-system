@@ -6,12 +6,22 @@ from typing import Any, Protocol
 
 from dual_sleeve_trader.config.runtime import ExchangeName, RuntimeConfig
 from dual_sleeve_trader.core.account import AccountSnapshotV3, ExchangePositionSnapshot
-from dual_sleeve_trader.core.enums import OrderAction, OrderSide, OrderStatus, OrderType, PositionSide, SleeveId, TradingMode
+from dual_sleeve_trader.core.enums import (
+    OrderAction,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    SleeveId,
+    TradingMode,
+)
 from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderIntent, OrderRecord, SymbolFilters
 from dual_sleeve_trader.exchange.factory import build_exchange_adapter
 from dual_sleeve_trader.execution.order_router import OrderRouter
-from dual_sleeve_trader.execution.position_reconciliation import PositionReconciler, PositionReconciliationReport
+from dual_sleeve_trader.execution.position_reconciliation import (
+    PositionReconciler,
+    PositionReconciliationReport,
+)
 from dual_sleeve_trader.execution.reconciliation import OrderReconciler, ReconciliationReport
 from dual_sleeve_trader.execution.safe_mode import SafeModeController
 from dual_sleeve_trader.storage.position_store import SQLitePositionStore
@@ -59,8 +69,13 @@ class TestnetReadWriteSmokeResult:
 
     @property
     def ok(self) -> bool:
+        accepted_submit_statuses = {
+            OrderStatus.SUBMITTED,
+            OrderStatus.PARTIALLY_FILLED,
+            OrderStatus.FILLED,
+        }
         return (
-            self.submitted_status in {OrderStatus.SUBMITTED, OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED}
+            self.submitted_status in accepted_submit_statuses
             and self.queried_status_after_cancel == OrderStatus.CANCELED
             and self.order_reconciliation_consistent
             and self.position_reconciliation_consistent
@@ -88,7 +103,7 @@ def run_testnet_read_write_smoke_with_exchange(
     if not acknowledge_testnet_order:
         raise TestnetSmokeSafetyError("explicit acknowledgement is required before placing a testnet order")
 
-    filters = exchange.get_symbol_filters(order_config.symbol)
+    exchange.get_symbol_filters(order_config.symbol)
     account = exchange.fetch_account_snapshot()
     positions = exchange.fetch_position_snapshots(order_config.symbol)
     _validate_non_marketable(order_config, positions)
