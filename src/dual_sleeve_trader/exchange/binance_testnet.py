@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from dual_sleeve_trader.core.account import ExchangePositionSnapshot
 from dual_sleeve_trader.core.exchange_order import ExchangeOrderSnapshot
 from dual_sleeve_trader.core.models import OrderRecord, SymbolFilters
 from dual_sleeve_trader.exchange.interfaces import ExchangeAdapter
@@ -10,9 +11,14 @@ from dual_sleeve_trader.exchange.interfaces import ExchangeAdapter
 class BinanceUsdmTestnetAdapter(ExchangeAdapter):
     """Inert placeholder for Binance USD-M Futures Testnet integration."""
 
-    def __init__(self, filters: dict[str, SymbolFilters] | None = None) -> None:
+    def __init__(
+        self,
+        filters: dict[str, SymbolFilters] | None = None,
+        positions: list[ExchangePositionSnapshot] | None = None,
+    ) -> None:
         self._filters = filters or {}
         self._orders: dict[str, OrderRecord] = {}
+        self._positions = positions or []
 
     def get_symbol_filters(self, symbol: str) -> SymbolFilters:
         return self._filters.get(
@@ -35,6 +41,11 @@ class BinanceUsdmTestnetAdapter(ExchangeAdapter):
 
     def fetch_open_orders(self) -> list[OrderRecord]:
         return list(self._orders.values())
+
+    def fetch_position_snapshots(self, symbol: str | None = None) -> list[ExchangePositionSnapshot]:
+        if symbol is None:
+            return list(self._positions)
+        return [position for position in self._positions if position.symbol == symbol]
 
     def query_order(self, symbol: str, client_order_id: str) -> ExchangeOrderSnapshot | None:
         _ = symbol
