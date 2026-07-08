@@ -21,18 +21,18 @@ def _bar(timestamp: str, close: str, high: str | None = None, low: str | None = 
 
 
 def _bull_daily_bars() -> list[OhlcBar]:
-    return [_bar(f"2024-01-{day:02d}", str(100 + day)) for day in range(1, 221)]
+    return [_bar(f"2023-D{day:03d}", str(100 + day)) for day in range(1, 221)]
 
 
 def _bear_daily_bars() -> list[OhlcBar]:
-    return [_bar(f"2024-01-{day:02d}", str(400 - day)) for day in range(1, 221)]
+    return [_bar(f"2023-D{day:03d}", str(400 - day)) for day in range(1, 221)]
 
 
 def test_sleeve_b_replay_long_breakout_hits_tp3() -> None:
     daily = _bull_daily_bars()
-    four_hour = [_bar(f"2024-01-01T{index:02d}:00:00", "100", "101", "99") for index in range(121)]
-    four_hour.append(_bar("2024-01-10T00:00:00", "105", "106", "104"))
-    four_hour.append(_bar("2024-01-10T04:00:00", "124", "126", "104"))
+    four_hour = [_bar(f"2024-B{index:03d}", "100", "101", "99") for index in range(121)]
+    four_hour.append(_bar("2024-B121", "105", "106", "104"))
+    four_hour.append(_bar("2024-B122", "124", "126", "104"))
 
     result = run_sleeve_b_replay(
         "BTCUSDT",
@@ -51,9 +51,9 @@ def test_sleeve_b_replay_long_breakout_hits_tp3() -> None:
 
 def test_sleeve_b_replay_short_breakdown_hits_tp1_then_breakeven() -> None:
     daily = _bear_daily_bars()
-    four_hour = [_bar(f"2024-01-01T{index:02d}:00:00", "200", "201", "199") for index in range(121)]
-    four_hour.append(_bar("2024-01-10T00:00:00", "195", "196", "194"))
-    four_hour.append(_bar("2024-01-10T04:00:00", "191", "195", "187"))
+    four_hour = [_bar(f"2024-B{index:03d}", "200", "201", "199") for index in range(121)]
+    four_hour.append(_bar("2024-B121", "195", "196", "194"))
+    four_hour.append(_bar("2024-B122", "191", "195", "187"))
 
     result = run_sleeve_b_replay(
         "ETHUSDT",
@@ -70,12 +70,9 @@ def test_sleeve_b_replay_short_breakdown_hits_tp1_then_breakeven() -> None:
 
 def test_sleeve_b_replay_time_stop_when_targets_not_hit() -> None:
     daily = _bull_daily_bars()
-    four_hour = [_bar(f"2024-01-01T{index:02d}:00:00", "100", "101", "99") for index in range(121)]
-    four_hour.append(_bar("2024-01-10T00:00:00", "105", "106", "104"))
-    four_hour.extend(
-        _bar(f"2024-01-10T{hour:02d}:00:00", "106", "107", "104")
-        for hour in range(4, 56, 4)
-    )
+    four_hour = [_bar(f"2024-B{index:03d}", "100", "101", "99") for index in range(121)]
+    four_hour.append(_bar("2024-B121", "105", "106", "104"))
+    four_hour.extend(_bar(f"2024-B{index:03d}", "106", "107", "104") for index in range(122, 135))
 
     result = run_sleeve_b_replay(
         "SOLUSDT",
