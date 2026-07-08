@@ -90,7 +90,7 @@ def test_allocator_rejects_when_max_positions_reached() -> None:
 
 def test_allocator_rejects_below_min_notional() -> None:
     allocator = SleeveBExecutionAllocator(
-        SleeveBExecutionAllocatorConfig(default_risk_fraction_per_trade=Decimal("0.002"))
+        SleeveBExecutionAllocatorConfig(default_risk_fraction_per_trade=Decimal("0.00002"))
     )
     candidate = SleeveBSignalCandidate(
         symbol="SOLUSDT",
