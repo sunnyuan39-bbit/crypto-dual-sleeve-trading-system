@@ -63,8 +63,9 @@ def _candidate(symbol: str = "BTCUSDT") -> SleeveBSignalCandidate:
 def test_candidate_builder_builds_long_breakout_candidate() -> None:
     daily = tuple(_bar(f"2023-D{day:03d}", str(100 + day)) for day in range(1, 221))
     four_hour = tuple([_bar(f"2024-B{index:03d}", "100", "101", "99") for index in range(121)] + [_bar("2024-B121", "105", "106", "104")])
+    one_hour = tuple(_bar(f"2024-H{index:03d}", "104", "105", "103") for index in range(100))
 
-    result = build_sleeve_b_candidate(SleeveBMarketData("BTCUSDT", daily, four_hour))
+    result = build_sleeve_b_candidate(SleeveBMarketData("BTCUSDT", daily, four_hour, one_hour))
 
     assert result.candidate is not None
     assert result.candidate.symbol == "BTCUSDT"
